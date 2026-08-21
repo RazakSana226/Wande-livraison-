@@ -1,0 +1,6 @@
+{
+  "name": "WÀNDÉ",
+  "description": "Marketplace de livraison à la demande moderne et rapide. Ton livreur, en quelques clics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
