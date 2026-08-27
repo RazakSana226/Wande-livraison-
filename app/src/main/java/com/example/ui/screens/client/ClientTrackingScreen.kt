@@ -1,6 +1,8 @@
 package com.example.ui.screens.client
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.DeliveryEntity
 import com.example.model.DeliveryStatus
+import com.example.model.DriverVerificationStatus
 import com.example.model.LatLngPoint
 import com.example.ui.components.DeliveryStatusBadge
 import com.example.ui.components.WandeInteractiveMap
@@ -139,6 +142,265 @@ fun ClientTrackingScreen(
                 }
             }
 
+            // Counter-Offer Decision Card (When a driver submits a counter-offer)
+            if (delivery.status == DeliveryStatus.DRIVER_COUNTER_OFFERED && delivery.driverCounterOffer != null) {
+                val counterPrice = delivery.driverCounterOffer ?: 1000
+                val commission = (counterPrice * 0.10).toInt()
+                val totalWithCommission = counterPrice + commission
+
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("counter_offer_decision_card"),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+                        border = BorderStroke(2.dp, Color(0xFFF59E0B)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFD97706)
+                                ) {
+                                    Text(
+                                        text = "PROPOSITION DU LIVREUR",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "$counterPrice FCFA",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFB45309)
+                                    )
+                                )
+                            }
+
+                            Text(
+                                text = "${delivery.driverName ?: "Un livreur disponible"} propose de prendre votre course à $counterPrice FCFA au lieu de ${delivery.customerInitialOffer} FCFA.",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                color = Color(0xFF78350F)
+                            )
+
+                            // Fee Breakdown for Counter-Offer
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Prix proposé par le livreur :", style = MaterialTheme.typography.bodySmall, color = Color(0xFF475569))
+                                        Text("$counterPrice FCFA", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Frais WÀNDÉ (10%) :", style = MaterialTheme.typography.bodySmall, color = Color(0xFF475569))
+                                        Text("$commission FCFA", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                                    }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("TOTAL À PAYER :", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF0F172A))
+                                        Text(
+                                            "$totalWithCommission FCFA",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black, color = WandePrimary)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Strict 2-Action Interface (Accept OR Refuse)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.rejectDriverCounterOffer(delivery.id) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .testTag("reject_counter_offer_button"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.5.dp, StatusError),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Refuser", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                }
+
+                                Button(
+                                    onClick = { viewModel.acceptDriverCounterOffer(delivery.id) },
+                                    modifier = Modifier
+                                        .weight(1.3f)
+                                        .height(48.dp)
+                                        .testTag("accept_counter_offer_button"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF16A34A),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Accepter ($totalWithCommission F)", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Customer Offer Status & Booster (when searching for a driver or after a rejection)
+            if (delivery.driverId == null && delivery.status != DeliveryStatus.DRIVER_COUNTER_OFFERED && delivery.status != DeliveryStatus.CANCELLED) {
+                item {
+                    var showOfferBooster by remember { mutableStateOf(false) }
+                    var boostAmountInput by remember { mutableStateOf((delivery.customerInitialOffer + 500).toString()) }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Votre offre actuelle",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${delivery.customerInitialOffer} FCFA",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, color = WandePrimary)
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF1F5F9)
+                                ) {
+                                    Text(
+                                        text = "Total payé: ${delivery.customerInitialOffer + (delivery.customerInitialOffer * 0.10).toInt()} F",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            if (!showOfferBooster) {
+                                OutlinedButton(
+                                    onClick = { showOfferBooster = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("boost_offer_button"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Augmenter l'offre pour accélérer")
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "Ajuster votre proposition (min 1 000 FCFA) :",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        listOf(1500, 2000, 2500).forEach { price ->
+                                            Surface(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable {
+                                                        boostAmountInput = price.toString()
+                                                        viewModel.updateCustomerOffer(delivery.id, price)
+                                                        showOfferBooster = false
+                                                    },
+                                                color = WandePrimary.copy(alpha = 0.1f)
+                                            ) {
+                                                Text(
+                                                    text = "$price F",
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = WandePrimary,
+                                                        textAlign = TextAlign.Center
+                                                    ),
+                                                    modifier = Modifier.padding(vertical = 8.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedTextField(
+                                            value = boostAmountInput,
+                                            onValueChange = { boostAmountInput = it.filter { ch -> ch.isDigit() } },
+                                            label = { Text("Montant FCFA") },
+                                            modifier = Modifier.weight(1f),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        Button(
+                                            onClick = {
+                                                val amount = boostAmountInput.toIntOrNull() ?: 0
+                                                if (amount >= 1000) {
+                                                    viewModel.updateCustomerOffer(delivery.id, amount)
+                                                    showOfferBooster = false
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = WandePrimary)
+                                        ) {
+                                            Text("Valider")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // OTP Secret Code Banner (Prominent for Delivery Confirmation)
             item {
                 Card(
@@ -244,11 +506,17 @@ fun ClientTrackingScreen(
                                         )
                                     }
                                     Column {
-                                        Text(
-                                            text = delivery.driverName ?: "Livreur Assigné",
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = delivery.driverName ?: "Livreur Assigné",
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            com.example.ui.components.DriverTrustBadge(status = DriverVerificationStatus.VERIFIED)
+                                        }
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)

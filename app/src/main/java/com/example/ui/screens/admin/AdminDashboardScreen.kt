@@ -80,7 +80,8 @@ fun AdminDashboardScreen(
                 Pair("DRIVERS", "Livreurs ($pendingDriversCount en attente)"),
                 Pair("DELIVERIES", "Courses actives ($activeDeliveriesCount)"),
                 Pair("FINANCES", "Finances & Virements ($pendingPayoutsCount)"),
-                Pair("SETTINGS", "Configuration Tarifs")
+                Pair("AUDIT", "Audit & Sécurité"),
+                Pair("SETTINGS", "Configuration")
             )
             items(tabs) { (key, label) ->
                 FilterChip(
@@ -109,8 +110,9 @@ fun AdminDashboardScreen(
             )
             "DRIVERS" -> AdminDriversContent(
                 drivers = drivers,
-                onApprove = { viewModel.adminSetDriverStatus(it, DriverVerificationStatus.VERIFIED) },
-                onReject = { viewModel.adminSetDriverStatus(it, DriverVerificationStatus.REJECTED) },
+                onApprove = { viewModel.adminReviewKycDecision(it, com.example.service.identity.KycAdminDecision.APPROVE) },
+                onReject = { viewModel.adminReviewKycDecision(it, com.example.service.identity.KycAdminDecision.REJECT, "Dossier non conforme") },
+                onRequestNewPhoto = { viewModel.adminReviewKycDecision(it, com.example.service.identity.KycAdminDecision.REQUEST_NEW_PHOTO, "Photo floue / CNI illisible. Veuillez reprendre.") },
                 onSuspend = { viewModel.adminSetDriverStatus(it, DriverVerificationStatus.SUSPENDED) }
             )
             "DELIVERIES" -> AdminDeliveriesContent(
@@ -122,10 +124,33 @@ fun AdminDashboardScreen(
                 onApprovePayout = { viewModel.adminProcessPayout(it, true) },
                 onRejectPayout = { viewModel.adminProcessPayout(it, false) }
             )
+            "AUDIT" -> AdminAuditTabContent(viewModel = viewModel)
             "SETTINGS" -> AdminSettingsContent(
                 currentSettings = settings ?: PlatformSettingsEntity(),
                 onSave = { viewModel.adminSaveSettings(it) }
             )
+        }
+    }
+}
+
+@Composable
+private fun AdminAuditTabContent(viewModel: WandeViewModel) {
+    val auditLogs by viewModel.allAuditLogs.collectAsState()
+    
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Text(
+                text = "Traçabilité des actions & Sécurité (OTP, Connexions, Virements)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        items(auditLogs, key = { it.id }) { log ->
+            AuditLogCard(log = log)
         }
     }
 }
@@ -276,6 +301,7 @@ private fun AdminDriversContent(
     drivers: List<DriverEntity>,
     onApprove: (String) -> Unit,
     onReject: (String) -> Unit,
+    onRequestNewPhoto: (String) -> Unit,
     onSuspend: (String) -> Unit
 ) {
     LazyColumn(
@@ -284,6 +310,8 @@ private fun AdminDriversContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(drivers) { driver ->
+            var isExpanded by remember { mutableStateOf(false) }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -329,10 +357,88 @@ private fun AdminDriversContent(
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        text = "Solde : ${driver.balanceXof} FCFA • Courses : ${driver.totalDeliveries} • Note : ★ ${driver.rating}",
+                        text = "Pièce : ${driver.idDocumentType.label} • Ville : ${driver.city} (Né le ${driver.birthDate})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "Solde : ${driver.balanceXof} FCFA • Courses : ${driver.totalDeliveries} • Note : ★ ${driver.rating} • Score Liveness : ${(driver.livenessScore * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = WandePrimaryDark
+                    )
+
+                    // KYC Document Inspection Section
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { isExpanded = !isExpanded },
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isExpanded) "Masquer les pièces jointes KYC ▲" else "Examiner les pièces jointes KYC (3 fichiers) ▼",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = WandePrimary
+                            )
+                        }
+                    }
+
+                    if (isExpanded) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                color = Color(0xFFF1F5F9)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(Icons.Default.Badge, contentDescription = null, tint = WandePrimary, modifier = Modifier.size(24.dp))
+                                    Text("CNI Face Avant", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                color = Color(0xFFF1F5F9)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(Icons.Default.CreditCard, contentDescription = null, tint = WandePrimary, modifier = Modifier.size(24.dp))
+                                    Text("CNI Face Arrière", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                color = Color(0xFFF1F5F9)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(Icons.Default.Face, contentDescription = null, tint = Color(0xFF15803D), modifier = Modifier.size(24.dp))
+                                    Text("Selfie Caméra", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
                     HorizontalDivider()
@@ -351,19 +457,33 @@ private fun AdminDriversContent(
                             ) {
                                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Valider le compte")
+                                Text("Approuver")
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                         }
+
+                        if (driver.verificationStatus == DriverVerificationStatus.PENDING_VERIFICATION || driver.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) {
+                            OutlinedButton(
+                                onClick = { onRequestNewPhoto(driver.id) },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Photo à refaire")
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+
                         if (driver.verificationStatus != DriverVerificationStatus.REJECTED) {
                             OutlinedButton(
                                 onClick = { onReject(driver.id) },
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Rejeter")
+                                Text("Rejeter", color = StatusError)
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                         }
+
                         if (driver.verificationStatus == DriverVerificationStatus.VERIFIED) {
                             TextButton(onClick = { onSuspend(driver.id) }) {
                                 Text("Suspendre", color = StatusError)
@@ -615,6 +735,61 @@ private fun AdminSettingsContent(
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Enregistrer les tarifs", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Passerelle de Paiement & Virements",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = StatusSuccess.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "MOCK / TEST MODE",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = StatusSuccess),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Statut : Architecture PaymentProvider découplée et prête pour CinetPay V2.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("🔒 Sécurité des identifiants :", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                            Text("• Aucun secret de paiement (API Key, Site ID) n'est exposé côté frontend.", style = MaterialTheme.typography.bodySmall)
+                            Text("• L'intégration de production CinetPay s'exécute exclusivement côté serveur (Proxy & IPN Webhook).", style = MaterialTheme.typography.bodySmall)
+                            Text("• Les fonds utilisateurs ne sont pas conservés dans Firestore mais gérés par la passerelle de paiement.", style = MaterialTheme.typography.bodySmall)
+                            Text("• Le système de versement aux livreurs vérifie automatiquement l'éligibilité KYC avant décaissement.", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }

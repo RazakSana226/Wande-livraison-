@@ -12,6 +12,8 @@ data class UserEntity(
     val name: String,
     val phone: String,
     val email: String? = null,
+    val isEmailVerified: Boolean = false,
+    val firebaseUid: String? = null,
     val photoUrl: String? = null,
     val status: String = "ACTIVE",
     val createdAt: Long = System.currentTimeMillis(),
@@ -30,6 +32,13 @@ data class DriverEntity(
     val vehicleModel: String = "Yamaha 125",
     val vehicleNumber: String = "11-AB-2044-BF",
     val verificationStatus: DriverVerificationStatus = DriverVerificationStatus.PENDING_VERIFICATION,
+    val idDocumentType: IdentityDocumentType = IdentityDocumentType.CNI,
+    val idDocumentFrontUrl: String? = "id_cni_front_preview.jpg",
+    val idDocumentBackUrl: String? = "id_cni_back_preview.jpg",
+    val selfieUrl: String? = "selfie_driver_preview.jpg",
+    val livenessScore: Float = 0.98f,
+    val birthDate: String = "12/05/1996",
+    val city: String = "Ouagadougou",
     val idDocumentUrl: String? = "id_card_sample.jpg",
     val vehiclePhotoUrl: String? = "vehicle_sample.jpg",
     val mobileMoneyNumber: String = "",
@@ -41,6 +50,9 @@ data class DriverEntity(
     val ratingCount: Int = 24,
     val totalDeliveries: Int = 42,
     val balanceXof: Int = 0,
+    val rejectionReason: String? = null,
+    val kycSubmittedAt: Long? = System.currentTimeMillis(),
+    val kycReviewedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -76,22 +88,36 @@ data class DeliveryEntity(
     // Distance & Pricing (All in integer FCFA/XOF)
     val distanceKm: Double = 3.5,
     val estimatedMinutes: Int = 15,
+    // Simplified Offer & Negotiation Architecture
+    val customerInitialOffer: Int = 1000,
+    val driverCounterOffer: Int? = null,
+    val finalDeliveryPrice: Int = 1000,
+    val commission: Int = 100, // 10% of finalDeliveryPrice
+    val customerTotal: Int = 1100, // finalDeliveryPrice + commission
+    val driverEarnings: Int = 1000, // finalDeliveryPrice
+    val counterOfferDriverId: String? = null,
+    val counterOfferDriverName: String? = null,
+    val counterOfferDriverPhone: String? = null,
+    val counterOfferDriverRating: Double = 4.9,
+    val counterOfferDriverDeliveries: Int = 127,
+    val offerStatus: String = "SEARCHING_DRIVER",
+    // Backward compatibility aliases
     val basePriceXof: Int = 500,
     val distancePriceXof: Int = 750,
     val packageSurchargeXof: Int = 0,
-    val totalPriceXof: Int = 1250,
-    val platformFeeXof: Int = 125, // 10%
-    val driverEarningsXof: Int = 1125,
+    val totalPriceXof: Int = customerTotal,
+    val platformFeeXof: Int = commission,
+    val driverEarningsXof: Int = driverEarnings,
     // Security OTP (Generated at creation, shown to recipient, verified by driver at arrival)
     val otpCode: String = (1000..9999).random().toString(),
     val otpAttempts: Int = 0,
-    val status: DeliveryStatus = DeliveryStatus.REQUESTED,
+    val status: DeliveryStatus = DeliveryStatus.SEARCHING_DRIVER,
     // Live tracking progress coords
     val currentDriverLat: Double = pickupLat,
     val currentDriverLng: Double = pickupLng,
     // Payment
     val isPaid: Boolean = false,
-    val paymentProvider: PaymentProvider = PaymentProvider.ORANGE_MONEY,
+    val paymentProvider: PaymentMethod = PaymentMethod.ORANGE_MONEY,
     val paymentTransactionId: String? = null,
     // Timestamps
     val createdAt: Long = System.currentTimeMillis(),
@@ -110,7 +136,7 @@ data class PaymentEntity(
     val clientId: String,
     val amountXof: Int,
     val currency: String = "XOF",
-    val provider: PaymentProvider = PaymentProvider.ORANGE_MONEY,
+    val provider: PaymentMethod = PaymentMethod.ORANGE_MONEY,
     val providerTransactionId: String = "PAY-" + System.currentTimeMillis(),
     val status: PaymentStatus = PaymentStatus.SUCCESS,
     val idempotencyKey: String = UUID.randomUUID().toString(),
@@ -138,7 +164,7 @@ data class PayoutEntity(
     val driverName: String,
     val amountXof: Int,
     val phone: String,
-    val provider: PaymentProvider = PaymentProvider.ORANGE_MONEY,
+    val provider: PaymentMethod = PaymentMethod.ORANGE_MONEY,
     val status: PayoutStatus = PayoutStatus.PAYOUT_PENDING,
     val transactionRef: String = "OUT-" + (10000..99999).random(),
     val createdAt: Long = System.currentTimeMillis(),
@@ -187,4 +213,55 @@ data class PlatformSettingsEntity(
     val mockMapsEnabled: Boolean = false,
     val mockNotificationsEnabled: Boolean = true,
     val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "email_otps")
+data class EmailOtpEntity(
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
+    val userId: String,
+    val email: String,
+    val hashedOtp: String,
+    val salt: String,
+    val purpose: OtpPurpose = OtpPurpose.EMAIL_VERIFICATION,
+    val createdAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + 10 * 60 * 1000L, // 10 minutes max
+    val attempts: Int = 0,
+    val maxAttempts: Int = 5,
+    val verifiedAt: Long? = null,
+    val isInvalidated: Boolean = false
+)
+
+@Entity(tableName = "delivery_otps")
+data class DeliveryOtpEntity(
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
+    val deliveryId: String,
+    val orderId: String,
+    val clientId: String,
+    val driverId: String? = null,
+    val hashedOtp: String,
+    val salt: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + 24 * 3600 * 1000L, // 24h validity
+    val attempts: Int = 0,
+    val maxAttempts: Int = 5,
+    val status: DeliveryOtpStatus = DeliveryOtpStatus.PENDING,
+    val verifiedAt: Long? = null,
+    val verifiedByDriverId: String? = null
+)
+
+@Entity(tableName = "audit_logs")
+data class AuditLogEntity(
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
+    val userId: String? = null,
+    val userEmail: String? = null,
+    val userRole: UserRole? = null,
+    val action: AuditAction,
+    val details: String,
+    val ipAddress: String = "127.0.0.1",
+    val deviceInfo: String = "WÀNDÉ Mobile Client",
+    val severity: AuditSeverity = AuditSeverity.INFO,
+    val timestamp: Long = System.currentTimeMillis()
 )

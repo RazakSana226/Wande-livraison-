@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.PaymentProvider
+import com.example.model.PaymentMethod
 import com.example.model.TransactionType
 import com.example.ui.components.PayoutStatusBadge
 import com.example.ui.theme.*
@@ -43,7 +43,7 @@ fun DriverEarningsScreen(
     var showPayoutDialog by remember { mutableStateOf(false) }
     var payoutAmountStr by remember { mutableStateOf("") }
     var payoutPhone by remember { mutableStateOf(driver?.mobileMoneyNumber ?: "+226 76 98 76 54") }
-    var payoutProvider by remember { mutableStateOf(PaymentProvider.ORANGE_MONEY) }
+    var payoutProvider by remember { mutableStateOf(PaymentMethod.ORANGE_MONEY) }
 
     Scaffold(
         topBar = {
@@ -268,18 +268,18 @@ fun DriverEarningsScreen(
                     Text("Opérateur :", style = MaterialTheme.typography.labelSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         FilterChip(
-                            selected = payoutProvider == PaymentProvider.ORANGE_MONEY,
-                            onClick = { payoutProvider = PaymentProvider.ORANGE_MONEY },
+                            selected = payoutProvider == PaymentMethod.ORANGE_MONEY,
+                            onClick = { payoutProvider = PaymentMethod.ORANGE_MONEY },
                             label = { Text("Orange") }
                         )
                         FilterChip(
-                            selected = payoutProvider == PaymentProvider.MOOV_MONEY,
-                            onClick = { payoutProvider = PaymentProvider.MOOV_MONEY },
+                            selected = payoutProvider == PaymentMethod.MOOV_MONEY,
+                            onClick = { payoutProvider = PaymentMethod.MOOV_MONEY },
                             label = { Text("Moov") }
                         )
                         FilterChip(
-                            selected = payoutProvider == PaymentProvider.WAVE,
-                            onClick = { payoutProvider = PaymentProvider.WAVE },
+                            selected = payoutProvider == PaymentMethod.WAVE,
+                            onClick = { payoutProvider = PaymentMethod.WAVE },
                             label = { Text("Wave") }
                         )
                     }

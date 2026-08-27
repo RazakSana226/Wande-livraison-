@@ -44,47 +44,14 @@ fun WandeRoleHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Logo & Slogan
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(WandePrimary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TwoWheeler,
-                            contentDescription = "Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "WÀNDÉ",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            ),
-                            color = WandePrimary
-                        )
-                        Text(
-                            text = "Ton livreur, en quelques clics",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                // High impact Logo & Slogan
+                WandeHeaderLogo()
 
                 // Active orders pill or live badge
                 if (activeOrderCount > 0) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = WandeAccent.copy(alpha = 0.15f)
+                        color = WandePrimary.copy(alpha = 0.12f)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -95,12 +62,12 @@ fun WandeRoleHeader(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(WandeAccent)
+                                    .background(WandePrimary)
                             )
                             Text(
                                 text = "$activeOrderCount en cours",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = WandeAccentDark
+                                color = WandePrimaryDark
                             )
                         }
                     }

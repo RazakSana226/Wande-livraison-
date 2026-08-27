@@ -4,7 +4,7 @@ import androidx.room.TypeConverter
 import com.example.model.DeliveryStatus
 import com.example.model.DriverVerificationStatus
 import com.example.model.PackageSize
-import com.example.model.PaymentProvider
+import com.example.model.PaymentMethod
 import com.example.model.PaymentStatus
 import com.example.model.PayoutStatus
 import com.example.model.TransactionType
@@ -24,6 +24,13 @@ class Converters {
     @TypeConverter
     fun toDriverVerificationStatus(value: String): DriverVerificationStatus =
         runCatching { DriverVerificationStatus.valueOf(value) }.getOrDefault(DriverVerificationStatus.PENDING_VERIFICATION)
+
+    @TypeConverter
+    fun fromIdentityDocumentType(value: com.example.model.IdentityDocumentType): String = value.name
+
+    @TypeConverter
+    fun toIdentityDocumentType(value: String): com.example.model.IdentityDocumentType =
+        runCatching { com.example.model.IdentityDocumentType.valueOf(value) }.getOrDefault(com.example.model.IdentityDocumentType.CNI)
 
     @TypeConverter
     fun fromVehicleType(value: VehicleType): String = value.name
@@ -47,11 +54,11 @@ class Converters {
         runCatching { DeliveryStatus.valueOf(value) }.getOrDefault(DeliveryStatus.REQUESTED)
 
     @TypeConverter
-    fun fromPaymentProvider(value: PaymentProvider): String = value.name
+    fun fromPaymentMethod(value: PaymentMethod): String = value.name
 
     @TypeConverter
-    fun toPaymentProvider(value: String): PaymentProvider =
-        runCatching { PaymentProvider.valueOf(value) }.getOrDefault(PaymentProvider.ORANGE_MONEY)
+    fun toPaymentMethod(value: String): PaymentMethod =
+        runCatching { PaymentMethod.valueOf(value) }.getOrDefault(PaymentMethod.ORANGE_MONEY)
 
     @TypeConverter
     fun fromPaymentStatus(value: PaymentStatus): String = value.name
@@ -73,4 +80,32 @@ class Converters {
     @TypeConverter
     fun toPayoutStatus(value: String): PayoutStatus =
         runCatching { PayoutStatus.valueOf(value) }.getOrDefault(PayoutStatus.PAYOUT_PENDING)
+
+    @TypeConverter
+    fun fromOtpPurpose(value: com.example.model.OtpPurpose): String = value.name
+
+    @TypeConverter
+    fun toOtpPurpose(value: String): com.example.model.OtpPurpose =
+        runCatching { com.example.model.OtpPurpose.valueOf(value) }.getOrDefault(com.example.model.OtpPurpose.EMAIL_VERIFICATION)
+
+    @TypeConverter
+    fun fromDeliveryOtpStatus(value: com.example.model.DeliveryOtpStatus): String = value.name
+
+    @TypeConverter
+    fun toDeliveryOtpStatus(value: String): com.example.model.DeliveryOtpStatus =
+        runCatching { com.example.model.DeliveryOtpStatus.valueOf(value) }.getOrDefault(com.example.model.DeliveryOtpStatus.PENDING)
+
+    @TypeConverter
+    fun fromAuditAction(value: com.example.model.AuditAction): String = value.name
+
+    @TypeConverter
+    fun toAuditAction(value: String): com.example.model.AuditAction =
+        runCatching { com.example.model.AuditAction.valueOf(value) }.getOrDefault(com.example.model.AuditAction.LOGIN)
+
+    @TypeConverter
+    fun fromAuditSeverity(value: com.example.model.AuditSeverity): String = value.name
+
+    @TypeConverter
+    fun toAuditSeverity(value: String): com.example.model.AuditSeverity =
+        runCatching { com.example.model.AuditSeverity.valueOf(value) }.getOrDefault(com.example.model.AuditSeverity.INFO)
 }

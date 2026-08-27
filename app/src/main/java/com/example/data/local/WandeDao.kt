@@ -14,6 +14,18 @@ interface WandeDao {
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
     suspend fun getUserById(id: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): UserEntity?
+
+    @Query("SELECT * FROM users WHERE firebaseUid = :uid LIMIT 1")
+    suspend fun getUserByFirebaseUid(uid: String): UserEntity?
+
+    @Query("UPDATE users SET isEmailVerified = :isVerified WHERE id = :userId")
+    suspend fun updateEmailVerification(userId: String, isVerified: Boolean)
+
+    @Query("UPDATE users SET email = :email, isEmailVerified = 0 WHERE id = :userId")
+    suspend fun updateUserEmail(userId: String, email: String)
+
     @Query("SELECT * FROM users WHERE role = :role")
     fun getUsersByRole(role: UserRole): Flow<List<UserEntity>>
 
@@ -70,7 +82,7 @@ interface WandeDao {
     @Query("SELECT * FROM deliveries WHERE driverId = :driverId ORDER BY createdAt DESC")
     fun getDeliveriesForDriver(driverId: String): Flow<List<DeliveryEntity>>
 
-    @Query("SELECT * FROM deliveries WHERE status = 'SEARCHING_DRIVER' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM deliveries WHERE driverId IS NULL AND status IN ('SEARCHING_DRIVER', 'DRIVER_COUNTER_OFFERED', 'COUNTER_OFFER_REJECTED', 'REQUESTED') ORDER BY createdAt DESC")
     fun getOpenDeliveries(): Flow<List<DeliveryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -144,4 +156,46 @@ interface WandeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveSettings(settings: PlatformSettingsEntity)
+
+    // Email OTPs
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEmailOtp(otp: EmailOtpEntity)
+
+    @Update
+    suspend fun updateEmailOtp(otp: EmailOtpEntity)
+
+    @Query("SELECT * FROM email_otps WHERE email = :email AND isInvalidated = 0 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getLatestActiveEmailOtp(email: String): EmailOtpEntity?
+
+    @Query("SELECT * FROM email_otps WHERE userId = :userId AND purpose = :purpose AND isInvalidated = 0 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getLatestEmailOtpForUser(userId: String, purpose: OtpPurpose): EmailOtpEntity?
+
+    @Query("SELECT * FROM email_otps WHERE email = :email AND createdAt > :sinceTimestamp")
+    suspend fun getRecentEmailOtps(email: String, sinceTimestamp: Long): List<EmailOtpEntity>
+
+    @Query("UPDATE email_otps SET isInvalidated = 1 WHERE email = :email")
+    suspend fun invalidateEmailOtps(email: String)
+
+    // Delivery OTPs
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeliveryOtp(deliveryOtp: DeliveryOtpEntity)
+
+    @Update
+    suspend fun updateDeliveryOtp(deliveryOtp: DeliveryOtpEntity)
+
+    @Query("SELECT * FROM delivery_otps WHERE deliveryId = :deliveryId LIMIT 1")
+    suspend fun getDeliveryOtpByDeliveryId(deliveryId: String): DeliveryOtpEntity?
+
+    // Audit Logs
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditLog(log: AuditLogEntity)
+
+    @Query("SELECT * FROM audit_logs ORDER BY timestamp DESC")
+    fun getAllAuditLogs(): Flow<List<AuditLogEntity>>
+
+    @Query("SELECT * FROM audit_logs WHERE userId = :userId ORDER BY timestamp DESC")
+    fun getAuditLogsForUser(userId: String): Flow<List<AuditLogEntity>>
+
+    @Query("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentAuditLogs(limit: Int): List<AuditLogEntity>
 }

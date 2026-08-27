@@ -1,6 +1,7 @@
 package com.example.ui.screens.driver
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.DeliveryEntity
+import com.example.model.DeliveryStatus
 import com.example.model.DriverVerificationStatus
 import com.example.ui.components.DriverVerificationBadge
 import com.example.ui.components.MetricStatCard
@@ -35,6 +37,7 @@ fun DriverHomeScreen(
     onNavigateToActiveDelivery: (String) -> Unit,
     onNavigateToEarnings: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToOnboarding: () -> Unit = onNavigateToProfile,
     modifier: Modifier = Modifier
 ) {
     val driver by viewModel.currentDriver.collectAsState()
@@ -57,7 +60,7 @@ fun DriverHomeScreen(
                     .testTag("driver_status_card"),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isOnline) WandePrimaryDark else Color(0xFF1E293B)
+                    containerColor = if (isOnline) WandePrimaryDark else Color(0xFF0F172A)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
@@ -75,13 +78,13 @@ fun DriverHomeScreen(
                                 modifier = Modifier
                                     .size(46.dp)
                                     .clip(CircleShape)
-                                    .background(if (isOnline) WandeAccent else Color.Gray),
+                                    .background(if (isOnline) WandePrimaryLight else Color.Gray),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.TwoWheeler,
                                     contentDescription = null,
-                                    tint = Color.Black,
+                                    tint = Color.White,
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
@@ -96,7 +99,7 @@ fun DriverHomeScreen(
                                 Text(
                                     text = "${driver?.vehicleModel ?: "Yamaha 125"} • ★ ${driver?.rating ?: 5.0}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.8f)
+                                    color = Color.White.copy(alpha = 0.85f)
                                 )
                             }
                         }
@@ -106,8 +109,8 @@ fun DriverHomeScreen(
                             onCheckedChange = { viewModel.toggleDriverOnline(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = WandeAccent,
-                                uncheckedThumbColor = Color.Gray,
+                                checkedTrackColor = WandeCyan,
+                                uncheckedThumbColor = Color.LightGray,
                                 uncheckedTrackColor = Color(0xFF334155)
                             ),
                             modifier = Modifier.testTag("driver_online_switch")
@@ -145,6 +148,65 @@ fun DriverHomeScreen(
                         driver?.verificationStatus?.let { status ->
                             DriverVerificationBadge(status = status)
                         }
+                    }
+                }
+            }
+        }
+
+        // KYC Verification Banner (if pending, rejected, or action required)
+        if (driver?.verificationStatus != DriverVerificationStatus.VERIFIED) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onNavigateToOnboarding() }
+                        .testTag("driver_kyc_verification_banner"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFFFFF7ED) else Color(0xFFEFF6FF)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFFFDBA74) else Color(0xFFBFDBFE)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFFEA580C) else WandePrimary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Icons.Default.Warning else Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) "Action requise sur votre dossier KYC" else "Vérification d'identité (KYC)",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFF9A3412) else WandePrimaryDark
+                            )
+                            Text(
+                                text = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) (driver?.rejectionReason ?: "Veuillez reprendre une photo nette de votre pièce.") else "Complétez votre pièce d'identité et selfie pour débloquer toutes les courses.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFFC2410C) else WandeBlack.copy(alpha = 0.8f)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Ouvrir",
+                            tint = if (driver?.verificationStatus == DriverVerificationStatus.ACTION_REQUIRED) Color(0xFFEA580C) else WandePrimary
+                        )
                     }
                 }
             }
@@ -345,7 +407,11 @@ fun DriverHomeScreen(
             items(openDeliveries) { delivery ->
                 DriverIncomingRequestCard(
                     delivery = delivery,
-                    onAccept = { viewModel.acceptDeliveryRequest(delivery.id) }
+                    currentDriverId = viewModel.currentDriverId,
+                    onAccept = { viewModel.acceptDeliveryRequest(delivery.id) },
+                    onCounterOffer = { counterPrice ->
+                        viewModel.submitDriverCounterOffer(delivery.id, counterPrice)
+                    }
                 )
             }
         }
@@ -421,9 +487,26 @@ fun DriverHomeScreen(
 @Composable
 fun DriverIncomingRequestCard(
     delivery: DeliveryEntity,
+    currentDriverId: String,
     onAccept: () -> Unit,
+    onCounterOffer: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showCounterOfferDialog by remember { mutableStateOf(false) }
+    var counterOfferInput by remember {
+        mutableStateOf(
+            ((delivery.customerInitialOffer + 500).coerceAtLeast(1000)).toString()
+        )
+    }
+    var counterOfferError by remember { mutableStateOf<String?>(null) }
+
+    val isThisDriverCounterOffering = delivery.counterOfferDriverId == currentDriverId
+    val hasCounterOfferPending = delivery.status == DeliveryStatus.DRIVER_COUNTER_OFFERED && isThisDriverCounterOffering
+    val isCounterOfferRejected = delivery.status == DeliveryStatus.COUNTER_OFFER_REJECTED && isThisDriverCounterOffering
+
+    val clientOffer = delivery.customerInitialOffer
+    val driverNetAtClientOffer = (clientOffer * 0.90).toInt()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -449,19 +532,28 @@ fun DriverIncomingRequestCard(
                     ) {
                         Icon(Icons.Default.Bolt, contentDescription = null, tint = WandeAccentDark, modifier = Modifier.size(16.dp))
                         Text(
-                            text = "NOUVELLE COURSE",
+                            text = "NOUVELLE DEMANDE",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, color = WandeAccentDark)
                         )
                     }
                 }
 
-                Text(
-                    text = "+${delivery.driverEarningsXof} FCFA net",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = WandePrimary
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Offre client : $clientOffer FCFA",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = WandePrimary
+                        )
                     )
-                )
+                    Text(
+                        text = "Gain net (90%) : $driverNetAtClientOffer F",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF16A34A)
+                        )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -507,25 +599,229 @@ fun DriverIncomingRequestCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Button(
-                onClick = onAccept,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .testTag("accept_course_button_${delivery.id}"),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = WandePrimary,
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Accepter la course (+${delivery.driverEarningsXof} FCFA)",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                )
+            if (hasCounterOfferPending) {
+                // Pending Counter-Offer state
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFFBEB),
+                    border = BorderStroke(1.dp, Color(0xFFFDE68A))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color(0xFFD97706),
+                            strokeWidth = 2.dp
+                        )
+                        Column {
+                            Text(
+                                text = "Contre-offre de ${delivery.driverCounterOffer} FCFA envoyée",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF92400E)
+                            )
+                            Text(
+                                text = "En attente de réponse du client...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFB45309)
+                            )
+                        }
+                    }
+                }
+            } else if (isCounterOfferRejected) {
+                // Counter-Offer Rejected state
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFEF2F2),
+                    border = BorderStroke(1.dp, Color(0xFFFECACA))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = StatusError,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Contre-offre déclinée par le client",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF991B1B)
+                            )
+                            Text(
+                                text = "Vous pouvez toujours accepter l'offre initiale de $clientOffer FCFA.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFB91C1C)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = onAccept,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("accept_initial_offer_button_${delivery.id}"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = WandePrimary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Accepter au prix client ($clientOffer FCFA)",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            } else {
+                // Two standard actions: Accept OR Propose Counter-Offer
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showCounterOfferDialog = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .testTag("counter_offer_button_${delivery.id}"),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.5.dp, WandePrimary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = WandePrimary)
+                    ) {
+                        Text(
+                            text = "Proposer un prix",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .height(48.dp)
+                            .testTag("accept_course_button_${delivery.id}"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WandePrimary,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Accepter ($clientOffer F)",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
             }
         }
+    }
+
+    // Counter Offer Modal Dialog
+    if (showCounterOfferDialog) {
+        AlertDialog(
+            onDismissRequest = { showCounterOfferDialog = false },
+            title = {
+                Text(
+                    text = "Proposer votre prix",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Offre initiale du client : $clientOffer FCFA",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Saisissez votre contre-offre (minimum 1 000 FCFA). Vous ne pourrez faire qu'une seule proposition.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    OutlinedTextField(
+                        value = counterOfferInput,
+                        onValueChange = {
+                            val digits = it.filter { ch -> ch.isDigit() }
+                            counterOfferInput = digits
+                            val amount = digits.toIntOrNull() ?: 0
+                            counterOfferError = if (digits.isNotEmpty() && amount < 1000) {
+                                "Le montant minimum est de 1 000 FCFA"
+                            } else null
+                        },
+                        label = { Text("Votre proposition (FCFA)") },
+                        trailingIcon = {
+                            Text(
+                                text = "FCFA",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        },
+                        isError = counterOfferError != null,
+                        supportingText = {
+                            counterOfferError?.let {
+                                Text(text = it, color = StatusError, style = MaterialTheme.typography.labelSmall)
+                            }
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("driver_counter_offer_input")
+                    )
+
+                    val proposedAmount = counterOfferInput.toIntOrNull() ?: 0
+                    if (proposedAmount >= 1000) {
+                        val netEarnings = (proposedAmount * 0.90).toInt()
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFF0FDF4),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Votre gain net (90%) : $netEarnings FCFA\nCommission WÀNDÉ (10%) : ${(proposedAmount * 0.10).toInt()} FCFA",
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF15803D)),
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = counterOfferInput.toIntOrNull() ?: 0
+                        if (amount >= 1000) {
+                            onCounterOffer(amount)
+                            showCounterOfferDialog = false
+                        } else {
+                            counterOfferError = "Le montant minimum est de 1 000 FCFA"
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WandePrimary),
+                    modifier = Modifier.testTag("submit_counter_offer_button")
+                ) {
+                    Text("Envoyer l'offre")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCounterOfferDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 }

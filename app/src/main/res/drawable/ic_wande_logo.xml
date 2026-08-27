@@ -1,0 +1,54 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+
+    <!-- Blue Squircle Container (App Icon badge style) -->
+    <path
+        android:fillColor="#0066FF"
+        android:pathData="M32,8 L96,8 C109.25,8 120,18.75 120,32 L120,96 C120,109.25 109.25,120 96,120 L32,120 C18.75,120 8,109.25 8,96 L8,32 C8,18.75 18.75,8 32,8 Z" />
+
+    <!-- Thin Inner White Squircle Border -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M34,14 L94,14 C105,14 114,23 114,34 L114,94 C114,105 105,114 94,114 L34,114 C23,114 14,105 14,94 L14,34 C14,23 23,14 34,14 Z" />
+
+    <!-- Stylized W Monogram in Pure White -->
+    <!-- 1. Leftmost rounded diagonal bar / loop -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M32,46 L42,68" />
+
+    <!-- 2. Bottom-left anchor dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,74m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0" />
+
+    <!-- 3. Connected dynamic stroke: bottom-left dot -> loop up -> down -> node -> arrow -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M32,74 L46,46 C48,42 54,42 56,46 L64,68 C66,74 72,74 74,68 L84,48" />
+
+    <!-- 4. Intermediate connection node / circle on the right diagonal -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,58m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0" />
+
+    <!-- 5. Northeast Arrowhead on the top right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,38 L94,40 L90,60 L85,54 L79,62 L74,57 L80,49 Z" />
+
+</vector>
+

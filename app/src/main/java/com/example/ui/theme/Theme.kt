@@ -11,35 +11,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = WandePrimaryLight,
-    onPrimary = Color.Black,
-    primaryContainer = WandePrimary,
-    onPrimaryContainer = Color.White,
-    secondary = WandeAccent,
-    onSecondary = Color.Black,
-    secondaryContainer = WandeAccentDark,
-    onSecondaryContainer = Color.White,
-    tertiary = WandeCyan,
-    background = WandeBackgroundDark,
-    onBackground = WandeTextPrimaryDark,
-    surface = WandeSurfaceDark,
-    onSurface = WandeTextPrimaryDark,
-    surfaceVariant = WandeSurfaceVariantDark,
-    onSurfaceVariant = WandeTextSecondaryDark,
-    error = StatusError,
-    onError = Color.White
-)
-
-private val LightColorScheme = lightColorScheme(
+private val AppColorScheme = lightColorScheme(
     primary = WandePrimary,
     onPrimary = Color.White,
-    primaryContainer = WandePrimaryLight.copy(alpha = 0.2f),
+    primaryContainer = Color(0xFFEBF3FF),
     onPrimaryContainer = WandePrimaryDark,
-    secondary = WandeAccentDark,
+    secondary = WandeSecondary,
     onSecondary = Color.White,
-    secondaryContainer = WandeAccent.copy(alpha = 0.2f),
-    onSecondaryContainer = Color(0xFF78350F),
+    secondaryContainer = Color(0xFFE0F2FE),
+    onSecondaryContainer = Color(0xFF0369A1),
     tertiary = WandeCyan,
     background = WandeBackgroundLight,
     onBackground = WandeTextPrimaryLight,
@@ -47,17 +27,18 @@ private val LightColorScheme = lightColorScheme(
     onSurface = WandeTextPrimaryLight,
     surfaceVariant = WandeSurfaceVariantLight,
     onSurfaceVariant = WandeTextSecondaryLight,
+    outline = WandeBorder,
     error = StatusError,
     onError = Color.White
 )
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Force pure white / bright theme as requested
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(colorScheme = AppColorScheme, typography = Typography, content = content)
 }
+
 

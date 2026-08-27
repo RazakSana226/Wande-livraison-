@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.LatLngPoint
 import com.example.model.PackageSize
-import com.example.model.PaymentProvider
+import com.example.model.PaymentMethod
+import com.example.model.PaymentSimulationMode
 import com.example.service.GeminiMapsService
 import com.example.ui.components.WandeInteractiveMap
 import com.example.ui.theme.*
@@ -504,56 +505,236 @@ fun CreateDeliveryScreen(
                 }
             }
 
-            // Guaranteed Price Breakdown Card (Calculated Server-Side)
+            // Simplified Price Selection & Transparent Fee Breakdown (Minimum 1000 FCFA)
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("price_selection_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Text(
-                            text = "Détail du tarif officiel WÀNDÉ",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Frais de base", style = MaterialTheme.typography.bodySmall)
-                            Text("${state.pricing?.basePriceXof ?: 500} FCFA", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium))
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Distance (${state.pricing?.distanceKm ?: 3.5} km @ 250 F/km)", style = MaterialTheme.typography.bodySmall)
-                            Text("${state.pricing?.distancePriceXof ?: 750} FCFA", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium))
-                        }
-                        if ((state.pricing?.packageSurchargeXof ?: 0) > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("Supplément format colis", style = MaterialTheme.typography.bodySmall)
-                                Text("+${state.pricing?.packageSurchargeXof} FCFA", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium))
-                            }
-                        }
-                        HorizontalDivider()
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Prix garanti", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                             Text(
-                                "${state.pricing?.totalPriceXof ?: 1250} FCFA",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black, color = WandePrimary)
+                                text = "Proposez votre prix",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = WandePrimary.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = "Min: 1 000 FCFA",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = WandePrimary
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Choisissez l'une des 3 suggestions ou entrez un montant personnalisé :",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // 3 Pricing Suggestions
+                        val suggestions = listOf(
+                            Triple(1000, "Prix minimum", "Minimum"),
+                            Triple(1500, "Prix recommandé", "Recommandé"),
+                            Triple(2000, "Offre plus attractive", "Express")
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            suggestions.forEach { (price, subtitle, tag) ->
+                                val isSelected = state.proposedPriceXof == price
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .clickable { viewModel.setProposedPrice(price) }
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) WandePrimary else Color(0xFFE2E8F0),
+                                            shape = RoundedCornerShape(14.dp)
+                                        ),
+                                    color = if (isSelected) WandePrimary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isSelected) WandePrimary else Color(0xFF64748B).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = tag,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp,
+                                                    color = if (isSelected) Color.White else Color(0xFF475569)
+                                                ),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = "$price F",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = if (isSelected) WandePrimary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
+                                        Text(
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Custom Price Input
+                        OutlinedTextField(
+                            value = state.customPriceInput,
+                            onValueChange = { viewModel.setCustomPriceInput(it) },
+                            label = { Text("Ou entrez un montant libre (FCFA)") },
+                            trailingIcon = {
+                                Text(
+                                    text = "FCFA",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = WandePrimary,
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                            },
+                            isError = state.pricingErrorMessage != null,
+                            supportingText = {
+                                if (state.pricingErrorMessage != null) {
+                                    Text(
+                                        text = state.pricingErrorMessage ?: "",
+                                        color = StatusError,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Montant libre supérieur ou égal à 1 000 FCFA",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("custom_price_input"),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+
+                        // Transparent Breakdown Card
+                        val proposedPrice = if (state.proposedPriceXof >= 1000) state.proposedPriceXof else 1000
+                        val commission = (proposedPrice * 0.10).toInt()
+                        val totalCustomer = proposedPrice + commission
+
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Prix proposé pour la course :",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "$proposedPrice FCFA",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Frais de service WÀNDÉ (10%) :",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "$commission FCFA",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "TOTAL À PAYER :",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "$totalCustomer FCFA",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = WandePrimary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        // Informational Notice
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF1F5F9)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = WandePrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Les suggestions de prix ne garantissent pas l'acceptation immédiate par un livreur. Plus l'offre est attractive, plus vite un livreur accepte.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF334155),
+                                    lineHeight = 16.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -570,13 +751,38 @@ fun CreateDeliveryScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Mode de paiement",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = WandeSecondary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "TEST / SANDBOX",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = WandeSecondary
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
                         Text(
-                            text = "Mode de paiement",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Architecture découplée (Prêt pour CinetPay V2 Serveur).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        PaymentProvider.values().forEach { provider ->
+                        PaymentMethod.values().forEach { provider ->
                             val isSelected = state.paymentProvider == provider
                             Surface(
                                 modifier = Modifier
@@ -597,20 +803,86 @@ fun CreateDeliveryScreen(
                                 ) {
                                     Icon(
                                         imageVector = when (provider) {
-                                            PaymentProvider.ORANGE_MONEY, PaymentProvider.MOOV_MONEY, PaymentProvider.WAVE -> Icons.Default.PhoneAndroid
-                                            PaymentProvider.CINETPAY, PaymentProvider.PAYDUNYA -> Icons.Default.AccountBalance
-                                            PaymentProvider.CASH_ON_DELIVERY -> Icons.Default.Payments
+                                            PaymentMethod.ORANGE_MONEY, PaymentMethod.MOOV_MONEY, PaymentMethod.WAVE -> Icons.Default.PhoneAndroid
+                                            PaymentMethod.CINETPAY, PaymentMethod.PAYDUNYA -> Icons.Default.AccountBalance
+                                            PaymentMethod.CASH_ON_DELIVERY -> Icons.Default.Payments
                                         },
                                         contentDescription = null,
                                         tint = if (isSelected) WandePrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
-                                        text = provider.label,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        ),
-                                        color = MaterialTheme.colorScheme.onSurface
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = provider.label,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (provider == PaymentMethod.CINETPAY) {
+                                            Text(
+                                                text = "Agrégateur multi-opérateurs (Orange, Moov, Wave, Cartes)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Simulation selector for testing various states
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Simulateur de statut (Tests & Évaluation) :",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        PaymentSimulationMode.values().forEach { simMode ->
+                            val isModeSelected = state.paymentSimulationMode == simMode
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { viewModel.setPaymentSimulationMode(simMode) }
+                                    .border(
+                                        width = if (isModeSelected) 1.5.dp else 1.dp,
+                                        color = if (isModeSelected) when (simMode) {
+                                            PaymentSimulationMode.SIMULATE_SUCCESS -> StatusSuccess
+                                            PaymentSimulationMode.SIMULATE_PENDING -> StatusWarning
+                                            PaymentSimulationMode.SIMULATE_FAILED -> StatusError
+                                            PaymentSimulationMode.SIMULATE_EXPIRED -> Color(0xFF6B7280)
+                                        } else Color(0xFFE5E7EB),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ),
+                                color = if (isModeSelected) when (simMode) {
+                                    PaymentSimulationMode.SIMULATE_SUCCESS -> StatusSuccess.copy(alpha = 0.08f)
+                                    PaymentSimulationMode.SIMULATE_PENDING -> StatusWarning.copy(alpha = 0.08f)
+                                    PaymentSimulationMode.SIMULATE_FAILED -> StatusError.copy(alpha = 0.08f)
+                                    PaymentSimulationMode.SIMULATE_EXPIRED -> Color(0xFF6B7280).copy(alpha = 0.08f)
+                                } else Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = isModeSelected,
+                                        onClick = { viewModel.setPaymentSimulationMode(simMode) }
                                     )
+                                    Column {
+                                        Text(
+                                            text = simMode.label,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = simMode.description,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }

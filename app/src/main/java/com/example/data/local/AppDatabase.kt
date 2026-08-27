@@ -21,9 +21,12 @@ import kotlinx.coroutines.launch
         PayoutEntity::class,
         ReviewEntity::class,
         DisputeEntity::class,
-        PlatformSettingsEntity::class
+        PlatformSettingsEntity::class,
+        EmailOtpEntity::class,
+        DeliveryOtpEntity::class,
+        AuditLogEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -86,6 +89,7 @@ abstract class AppDatabase : RoomDatabase() {
                 name = "Amadou Ouédraogo",
                 phone = "+226 70 12 34 56",
                 email = "amadou.ouedraogo@wande.bf",
+                isEmailVerified = true,
                 status = "ACTIVE"
             )
             val driverUser = UserEntity(
@@ -94,6 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                 name = "Ibrahim Traoré",
                 phone = "+226 76 98 76 54",
                 email = "ibrahim.traore@wande.bf",
+                isEmailVerified = true,
                 status = "ACTIVE"
             )
             val driverUser2 = UserEntity(
@@ -102,6 +107,7 @@ abstract class AppDatabase : RoomDatabase() {
                 name = "Seydou Sawadogo",
                 phone = "+226 65 44 33 22",
                 email = "seydou.sawadogo@wande.bf",
+                isEmailVerified = true,
                 status = "ACTIVE"
             )
             val adminUser = UserEntity(
@@ -110,6 +116,7 @@ abstract class AppDatabase : RoomDatabase() {
                 name = "Admin WÀNDÉ",
                 phone = "+226 25 30 00 00",
                 email = "contact@wande.bf",
+                isEmailVerified = true,
                 status = "ACTIVE"
             )
 
@@ -194,7 +201,7 @@ abstract class AppDatabase : RoomDatabase() {
                 otpCode = "7392",
                 status = DeliveryStatus.DELIVERED,
                 isPaid = true,
-                paymentProvider = PaymentProvider.ORANGE_MONEY,
+                paymentProvider = PaymentMethod.ORANGE_MONEY,
                 createdAt = System.currentTimeMillis() - 86400000L,
                 acceptedAt = System.currentTimeMillis() - 85000000L,
                 pickedUpAt = System.currentTimeMillis() - 84000000L,

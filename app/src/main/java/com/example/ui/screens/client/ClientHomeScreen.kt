@@ -1,5 +1,6 @@
 package com.example.ui.screens.client
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,7 +27,9 @@ import androidx.compose.ui.unit.sp
 import com.example.model.DeliveryEntity
 import com.example.model.DeliveryStatus
 import com.example.ui.components.DeliveryStatusBadge
+import com.example.ui.components.WandeBrandBadge
 import com.example.ui.components.WandeInteractiveMap
+import com.example.ui.screens.auth.EmailVerificationBanner
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.WandeViewModel
 import java.text.SimpleDateFormat
@@ -43,6 +46,7 @@ fun ClientHomeScreen(
     val activeDelivery by viewModel.activeClientDelivery.collectAsState()
     val deliveries by viewModel.clientDeliveries.collectAsState()
     val settings by viewModel.platformSettings.collectAsState()
+    val currentAuthUser by viewModel.currentAuthUser.collectAsState()
 
     LazyColumn(
         modifier = modifier
@@ -51,7 +55,21 @@ fun ClientHomeScreen(
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero Card
+        // Email Verification Banner
+        currentAuthUser?.let { authUser ->
+            if (!authUser.isEmailVerified) {
+                item {
+                    EmailVerificationBanner(
+                        email = authUser.email,
+                        isVerified = authUser.isEmailVerified,
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(horizontal = 0.dp)
+                    )
+                }
+            }
+        }
+
+        // Hero Card (Bleu & Blanc)
         item {
             Card(
                 modifier = Modifier
@@ -65,36 +83,44 @@ fun ClientHomeScreen(
                         .fillMaxWidth()
                         .background(
                             brush = Brush.linearGradient(
-                                colors = listOf(WandePrimaryDark, WandePrimary, WandePrimaryLight)
+                                colors = listOf(WandePrimaryDark, WandePrimary, WandeSecondary)
                             )
                         )
                         .padding(20.dp)
                 ) {
                     Column {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = WandeAccent.copy(alpha = 0.25f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color.White.copy(alpha = 0.2f)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Bolt,
-                                    contentDescription = null,
-                                    tint = WandeAccent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Livraison express en ville",
-                                    color = WandeAccent,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = WandeCyan,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "Livraison express en ville",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
                             }
+
+                            WandeBrandBadge(size = 36.dp)
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
                             text = "Besoin d'envoyer\nquelque chose ?",
@@ -110,7 +136,7 @@ fun ClientHomeScreen(
                         Text(
                             text = "Tarifs transparents dès ${settings?.minimumPriceXof ?: 1000} FCFA. Suivi GPS en temps réel & validation sécurisée par code OTP.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.85f)
+                            color = Color.White.copy(alpha = 0.9f)
                         )
 
                         Spacer(modifier = Modifier.height(18.dp))
@@ -122,8 +148,8 @@ fun ClientHomeScreen(
                                 .height(52.dp)
                                 .testTag("request_delivery_button"),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = WandeAccent,
-                                contentColor = Color.Black
+                                containerColor = Color.White,
+                                contentColor = WandePrimary
                             ),
                             shape = RoundedCornerShape(14.dp),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
@@ -131,12 +157,14 @@ fun ClientHomeScreen(
                             Icon(
                                 imageVector = Icons.Default.AddCircleOutline,
                                 contentDescription = null,
+                                tint = WandePrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Demander une livraison",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = WandePrimary
                             )
                         }
                     }
@@ -199,6 +227,34 @@ fun ClientHomeScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        if (delivery.status == DeliveryStatus.DRIVER_COUNTER_OFFERED) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFFFFBEB),
+                                border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsActive,
+                                        contentDescription = null,
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Un livreur propose ${delivery.driverCounterOffer} FCFA ! Appuyez pour accepter ou refuser.",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF92400E)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -212,7 +268,7 @@ fun ClientHomeScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "Total : ${delivery.totalPriceXof} FCFA • OTP : ${delivery.otpCode}",
+                                    text = "Offre : ${delivery.finalDeliveryPrice} FCFA • OTP : ${delivery.otpCode}",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                     color = WandePrimary
                                 )
